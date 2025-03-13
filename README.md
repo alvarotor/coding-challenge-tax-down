@@ -1,29 +1,82 @@
-# Coding challenges
+# Motorbike Shop API
 
-![Logo](https://github.com/TaxDownAutomation/coding-challenge/raw/master/assets/logo.png)
+A RESTful API for customer management of an online motorbike shop, built with Node.js, TypeScript, and MongoDB.
 
-## About us
+## Features
 
-We love to get our hands dirty, each developer is owner of his own deployment cycle, from unit tests to DevOps. Besides, we work hard with math libraries, process automation, pseudo-languages and serverless, no time to get bored :boom:
+- CRUD operations for customers
+- Add credit to customer accounts
+- List customers sorted by available credit
+- Serverless deployment to AWS Lambda
+- Comprehensive test suite
 
-If you love to start from scratch and you dream with erradicating repetitive tasks, in TaxDown we are building the future of tax and giving our customers a 360 service. Our customers love us and we love them! They value us with an NPS of 75 :gift: (more on [nps](https://en.wikipedia.org/wiki/Net_Promoter))
+## Architecture
 
-And the press like us too! :newspaper:  
-[ABC](https://www.abc.es/economia/declaracion-renta/abci-seis-deducciones-autonomicas-poco-conocidas-ayudan-ahorrar-declaracion-renta-201906140223_noticia.html)
-[El Economista](https://www.eleconomista.es/declaracion-renta/noticias/9939100/06/19/Renta-2018-2019-Dime-donde-declaras-y-te-dire-cuanto-puedes-ahorrar-seis-deducciones-autonomicas-desconocidas.html)
-[Telecinco](https://www.telecinco.es/informativos/economia/multas-recargos-retraso-declaracion-renta-taxdown_18_2772270095.html)
-[Expansión](https://www.expansion.com/pymes/2019/06/21/5d0374bde5fdea76798b4765.html)
+This project follows Hexagonal Architecture (Ports and Adapters) with Domain-Driven Design principles:
 
-### Wait, but what do you *actually* do?
+- **Domain Layer**: Contains the core business logic and entities
+- **Application Layer**: Contains use cases that orchestrate the domain
+- **Infrastructure Layer**: Contains implementations of repositories, logging, etc.
+- **Interfaces Layer**: Contains API controllers and serverless handlers
 
-We have built the first fully digital tax advisor in Spain, and we are going into new markets and creating new products. We need to grow in every area: mobile, front, backend and data. You want to see what we have done? Feel free to [use](https://app.taxdown.es/landing) us!
+## Prerequisites
 
-### Hold on a sec, but what will I *actually* do?
+- Node.js (v14+)
+- MongoDB (local or Atlas)
+- AWS account (for serverless deployment)
+- Serverless Framework CLI (for deployment)
 
-You will help the dev team design and architect the future of TaxDown. We are continuously exploring new technologies and applying the methodologies that fit us the best, you will be making your own decissions on the best path to follow and will be challenged by experienced developers.
+## Installation
 
-Do you want to know more, why not take the challenge! :video_game:
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/motorbike-shop-api.git
+   cd motorbike-shop-api
+   ```
 
-### You want to take on the challenge?
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-Feel free to tackle the challenge, create a private repo and invite us!
+3. Create a `.env` file in the root directory with the following variables:
+   ```
+   MONGODB_URI=mongodb://localhost:27017/motorbike-shop
+   PORT=3000
+   LOG_LEVEL=info
+   ```
+
+## Running Locally
+
+Start the development server:
+
+```
+npm run dev
+```
+
+The API will be available at http://localhost:3000
+
+## Testing
+
+Run the test suite:
+
+```
+npm test
+```
+
+Run tests with coverage:
+
+```
+npm run test:coverage
+```
+
+## API Endpoints
+
+### Customers
+
+- `POST /api/customers` - Create a new customer
+- `GET /api/customers/:id` - Get a customer by ID
+- `PUT /api/customers/:id` - Update a customer
+- `DELETE /api/customers/:id` - Delete a customer
+- `POST /api/customers/:id/credit` - Add credit to a customer
+- `GET /api/customers` - Get customers sorted by credit
