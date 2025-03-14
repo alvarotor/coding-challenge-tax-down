@@ -2,12 +2,14 @@ import express, { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Logger } from '../logging/logger';
 import { CacheService } from '../cache/cache.service';
+import { MongoConnectionManager } from '../database/mongodb/connection-manager';
 
 export class HealthCheckService
 {
     constructor(
         private readonly logger: Logger,
-        private readonly cacheService?: CacheService
+        private readonly cacheService?: CacheService,
+        private readonly dbConnectionManager?: MongoConnectionManager
     ) { }
 
     async check ( req: Request, res: Response ): Promise<void>
@@ -38,7 +40,11 @@ export class HealthCheckService
         }
     }
 
-    private async checkDatabaseConnection (): Promise<{ status: string; responseTime?: number }>
+    private async checkDatabaseConnection (): Promise<{
+        status: string;
+        responseTime?: number;
+        poolStats?: any;
+    }>
     {
         const startTime = Date.now();
 
@@ -52,9 +58,25 @@ export class HealthCheckService
             // Perform a simple query to verify the connection is working
             await mongoose.connection.db.admin().ping();
 
+            // Get connection pool statistics if available
+            let poolStats;
+            if ( this.dbConnectionManager )
+            {
+                const status = this.dbConnectionManager.getStatus();
+                poolStats = status.poolStats;
+            } else
+            {
+                // Fallback to basic mongoose connection info
+                poolStats = {
+                    connectionState: mongoose.connection.readyState,
+                    maxPoolSize: mongoose.connection.config?.maxPoolSize || 'default'
+                };
+            }
+
             return {
                 status: 'connected',
-                responseTime: Date.now() - startTime
+                responseTime: Date.now() - startTime,
+                poolStats
             };
         } catch ( error )
         {

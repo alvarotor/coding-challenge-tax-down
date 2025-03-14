@@ -21,6 +21,7 @@ import { healthCheckRouter } from '../health/health-check';
 import { CacheService } from '../cache/cache.service';
 import { RedisCacheService } from '../cache/redis-cache.service';
 import { CachedCustomerRepository } from '../database/mongodb/cached-customer.repository';
+import { MongoConnectionManager } from '../database/mongodb/connection-manager';
 
 export class App
 {
@@ -28,6 +29,7 @@ export class App
     private logger: Logger;
     private tracingService: TracingService;
     private cacheService: CacheService | null;
+    private connectionManager: MongoConnectionManager;
 
     constructor()
     {
@@ -35,6 +37,7 @@ export class App
         this.logger = new WinstonLogger();
         this.tracingService = new TracingService( this.logger );
         this.cacheService = null;
+        this.connectionManager = new MongoConnectionManager( this.logger );
 
         this.initializeMiddlewares();
         this.initializeRoutes();
@@ -45,6 +48,13 @@ export class App
         {
             this.tracingService.start();
         }
+
+        // Monitor database connection events
+        this.connectionManager.on( 'error', ( err ) =>
+        {
+            this.logger.error( 'Database connection error detected in main app', { error: err.message } );
+            // Here you could implement circuit breaker logic or alerts
+        } );
     }
 
     private initializeMiddlewares (): void
@@ -145,9 +155,10 @@ export class App
                 return;
             }
 
-            // Normal connection logic for non-test environments
-            await mongoose.connect( process.env.MONGODB_URI || 'mongodb://localhost:27017/motorbike-shop' );
-            console.log( 'Connected to MongoDB' );
+            // Use our new connection manager
+            await this.connectionManager.connect(
+                process.env.MONGODB_URI || 'mongodb://localhost:27017/motorbike-shop'
+            );
         } catch ( error )
         {
             console.error( 'Failed to connect to MongoDB:', error );
@@ -162,7 +173,16 @@ export class App
 
     public async shutdown (): Promise<void>
     {
-        this.logger.info( 'Shutting down application' );
+        this.logger.info( 'Application shutting down...' );
+
+        // Disconnect database
+        try
+        {
+            await this.connectionManager.disconnect();
+        } catch ( error )
+        {
+            this.logger.error( 'Error during database disconnection', { error: ( error as Error ).message } );
+        }
 
         // Graceful shutdown of tracing
         if ( process.env.ENABLE_TRACING === 'true' )
@@ -176,12 +196,7 @@ export class App
             await this.cacheService.shutdown();
         }
 
-        // Close database connection
-        if ( mongoose.connection.readyState === 1 )
-        {
-            await mongoose.connection.close();
-            this.logger.info( 'Closed MongoDB connection' );
-        }
+        this.logger.info( 'Application shutdown complete' );
     }
 
     async start (): Promise<void>
