@@ -13,6 +13,9 @@ provider:
     LOG_TO_FILE: false
     AWS_REGION: us-east-1
     CLOUDWATCH_GROUP_NAME: /aws/lambda/${self:service}
+    REDIS_URL: ${env:REDIS_URL}
+    ENABLE_CACHE: true
+    CUSTOMER_CACHE_TTL: 3600
 
 plugins:
   - serverless-offline

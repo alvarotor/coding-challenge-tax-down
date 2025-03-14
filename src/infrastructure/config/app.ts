@@ -18,18 +18,23 @@ import { TracingService } from '../tracing/tracer';
 import { HealthCheckService } from '../health/health-check';
 import { errorHandler } from '../../interfaces/middleware/error-handler.middleware';
 import { healthCheckRouter } from '../health/health-check';
+import { CacheService } from '../cache/cache.service';
+import { RedisCacheService } from '../cache/redis-cache.service';
+import { CachedCustomerRepository } from '../database/mongodb/cached-customer.repository';
 
 export class App
 {
     private app: Application;
     private logger: Logger;
     private tracingService: TracingService;
+    private cacheService: CacheService | null;
 
     constructor()
     {
         this.app = express();
         this.logger = new WinstonLogger();
         this.tracingService = new TracingService( this.logger );
+        this.cacheService = null;
 
         this.initializeMiddlewares();
         this.initializeRoutes();
@@ -90,8 +95,17 @@ export class App
         const healthCheckService = new HealthCheckService( this.logger );
         this.app.get( '/health', ( req, res ) => healthCheckService.check( req, res ) );
 
-        // Customer routes
-        const customerRepository = new MongoCustomerRepository( this.logger );
+        // Initialize cache service
+        this.cacheService = new RedisCacheService( this.logger );
+
+        // Customer repositories with caching
+        const baseCustomerRepository = new MongoCustomerRepository( this.logger );
+        const customerRepository = new CachedCustomerRepository(
+            baseCustomerRepository,
+            this.cacheService,
+            this.logger,
+            parseInt( process.env.CUSTOMER_CACHE_TTL || '3600' ) // Default 1 hour, configurable
+        );
 
         const createCustomerUseCase = new CreateCustomerUseCase( customerRepository, this.logger );
         const getCustomerUseCase = new GetCustomerUseCase( customerRepository, this.logger );
@@ -154,6 +168,12 @@ export class App
         if ( process.env.ENABLE_TRACING === 'true' )
         {
             await this.tracingService.shutdown();
+        }
+
+        // Shutdown cache connections
+        if ( this.cacheService )
+        {
+            await this.cacheService.shutdown();
         }
 
         // Close database connection

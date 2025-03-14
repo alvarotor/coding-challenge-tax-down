@@ -1,10 +1,14 @@
 import express, { Router, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Logger } from '../logging/logger';
+import { CacheService } from '../cache/cache.service';
 
 export class HealthCheckService
 {
-    constructor( private readonly logger: Logger ) { }
+    constructor(
+        private readonly logger: Logger,
+        private readonly cacheService?: CacheService
+    ) { }
 
     async check ( req: Request, res: Response ): Promise<void>
     {
@@ -17,6 +21,7 @@ export class HealthCheckService
                 environment: process.env.NODE_ENV,
                 services: {
                     database: await this.checkDatabaseConnection(),
+                    cache: await this.checkCacheConnection()
                 }
             };
 
@@ -54,6 +59,32 @@ export class HealthCheckService
         } catch ( error )
         {
             this.logger.error( 'Database health check failed', { error: ( error as Error ).message } );
+            return { status: 'error' };
+        }
+    }
+
+    private async checkCacheConnection (): Promise<{ status: string; responseTime?: number }>
+    {
+        if ( !this.cacheService || process.env.ENABLE_CACHE !== 'true' )
+        {
+            return { status: 'disabled' };
+        }
+
+        const startTime = Date.now();
+        try
+        {
+            // Test cache with a simple operation
+            const testKey = 'health-check-test';
+            await this.cacheService.set( testKey, { test: true }, 10 );
+            await this.cacheService.get( testKey );
+
+            return {
+                status: 'connected',
+                responseTime: Date.now() - startTime
+            };
+        } catch ( error )
+        {
+            this.logger.error( 'Cache health check failed', { error: ( error as Error ).message } );
             return { status: 'error' };
         }
     }
