@@ -121,15 +121,23 @@ export class App
 
     public async connectToDatabase (): Promise<void>
     {
+        console.log( 'Connecting to database...' );
         try
         {
+            // Use the connection from setup.ts if in test mode
+            if ( process.env.NODE_ENV === 'test' )
+            {
+                console.log( 'Using existing MongoDB connection from test setup' );
+                return;
+            }
+
+            // Normal connection logic for non-test environments
             await mongoose.connect( process.env.MONGODB_URI || 'mongodb://localhost:27017/motorbike-shop' );
-            this.logger.info( 'Connected to MongoDB' );
+            console.log( 'Connected to MongoDB' );
         } catch ( error )
         {
-            this.logger.error( 'MongoDB connection error', { error: ( error as Error ).message } );
-            // Implement graceful shutdown
-            process.exit( 1 );
+            console.error( 'Failed to connect to MongoDB:', error );
+            throw error;
         }
     }
 
